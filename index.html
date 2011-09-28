@@ -230,7 +230,7 @@ function load(e) {
 
   // Retrieve response headers and set hash.
   var headers = e.currentTarget && e.currentTarget.getAllResponseHeaders();
-  var setqs = [];
+  var msg = {};
   if (headers) {
     headers = headers.split('\n');
     for (var i = 0; i < headers.length; i++) {
@@ -239,20 +239,20 @@ function load(e) {
       if (key === 'Location' ||
         key === 'x-amz-request-id' ||
         key === 'x-amz-id-2') {
-        setqs.push(key + '=' + val);
+        msg[key] = val;
       }
     }
   }
-  window.location.hash = '#' + setqs.join('&');
+  parent.postMessage(msg, '*');
 };
 function error(e) {
   progressInfo.innerHTML = 'An error occurred while uploading.';
-  window.location.hash = '#error=1';
+  parent.postMessage({error: 1}, '*');
   // @TODO retrieve error message from event.
 };
 function abort(e) {
   progressInfo.innerHTML = 'An error occurred while uploading.';
-  window.location.hash = '#error=1';
+  parent.postMessage({error: 1}, '*');
 };
 
 })();
