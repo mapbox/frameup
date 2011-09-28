@@ -224,16 +224,35 @@ function progress(e) {
   progressInfo.innerHTML = size(e.loaded) + ' of ' + size(e.total);
 };
 function load(e) {
-  console.warn(e.currentTarget.response);
   complete.innerHTML = '100%';
   complete.style.width = '100%';
   progressInfo.innerHTML = 'Upload complete.';
+
+  // Retrieve response headers and set hash.
+  var headers = e.currentTarget && e.currentTarget.getAllResponseHeaders();
+  var setqs = [];
+  if (headers) {
+    headers = headers.split('\n');
+    for (var i = 0; i < headers.length; i++) {
+      var key = headers[i].substr(0, headers[i].indexOf(':'));
+      var val = headers[i].substr(headers[i].indexOf(':') + 1).replace(' ', '');
+      if (key === 'Location' ||
+        key === 'x-amz-request-id' ||
+        key === 'x-amz-id-2') {
+        setqs.push(key + '=' + val);
+      }
+    }
+  }
+  window.location.hash = '#' + setqs.join('&');
 };
 function error(e) {
   progressInfo.innerHTML = 'An error occurred while uploading.';
+  window.location.hash = '#error=1';
+  // @TODO retrieve error message from event.
 };
 function abort(e) {
   progressInfo.innerHTML = 'An error occurred while uploading.';
+  window.location.hash = '#error=1';
 };
 
 })();
