@@ -200,8 +200,8 @@ submit.onclick = function(e) {
 
   e.preventDefault();
 
-  // xhr.open('POST', 'http://' + qs.bucket + '.s3.amazonaws.com/');
-  xhr.open('POST', 'http://localhost:8888/public/create');
+  xhr.open('POST', 'http://' + qs.bucket + '.s3.amazonaws.com/');
+  xhr.setRequestHeader('X_FILE_NAME', file.files[0].name);
   xhr.send(fd);
 };
 
@@ -211,10 +211,13 @@ function size(bytes) {
 	else if (bytes > 1e6)
     return (bytes / 1e6).toFixed(2) + 'MB';
 	else
-		return (bytes / 1e3).toFixed(2) + 'KB';
+  	return (bytes / 1e3).toFixed(2) + 'KB';
 };
 function progress(e) {
-  if (!e.loaded || !e.total) return;
+  if (!e.loaded || !e.total) {
+    console.warn(e);
+    return;
+  }
   var pct = (e.loaded / e.total * 100).toFixed(1);
   complete.innerHTML = pct > 10 ? pct + '%' : '';
   complete.style.width = pct + '%';
