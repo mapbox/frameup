@@ -1,0 +1,239 @@
+<!DOCTYPE html >
+<html>
+<head>
+<meta charset='UTF-8'/>
+<style type='text/css'>
+html,
+body,
+div,
+small,
+form,
+input {
+  margin:0px;
+  padding:0px;
+  border:0px;
+  font:14px/20px Helvetica,Arial,sans-serif;
+  vertical-align:baseline;
+  background:transparent;
+  color:#444;
+  }
+
+.wrapper {
+  height:60px;
+  overflow:hidden;
+  position:relative;
+  }
+
+small {
+  color:#888;
+  display:block;
+  font-size:12px;
+  }
+
+form,
+#progress {
+  height:60px;
+  position:absolute;
+  left:0px;
+  top:0px;
+  right:0px;
+  transition:top 300ms;
+  -moz-transition:top 300ms;
+  -webkit-transition:top 300ms;
+  }
+
+#progress { top:60px; }
+.uploading form { top:-60px; }
+.uploading #progress { top:0px; }
+
+#file,
+#graph {
+  background:#fff;
+  border:1px solid #ccc;
+  border-radius:5px;
+  -moz-border-radius:5px;
+  -webkit-border-radius:5px;
+  box-shadow:inset #eee 0px 0px 0px 1px;
+  -moz-box-shadow:inset #eee 0px 0px 0px 1px;
+  -webkit-box-shadow:inset #eee 0px 0px 0px 1px;
+  }
+
+#submit,
+#complete {
+  background:#999;
+  color:#fff;
+  border:1px solid #888;
+  border-color:#888 #777 #666;
+  font-weight:bold;
+  text-shadow:rgba(0,0,0,.25) 0px -1px;
+  border-radius:3px;
+  -moz-border-radius:3px;
+  -webkit-border-radius:3px;
+  box-shadow:inset rgba(255,255,255,0.25) 0px 0px 0px 1px;
+  -moz-box-shadow:inset rgba(255,255,255,0.25) 0px 0px 0px 1px;
+  -webkit-box-shadow:inset rgba(255,255,255,0.25) 0px 0px 0px 1px;
+  transition:background 100ms, box-shadow 100ms;
+  -moz-transition:background 100ms, box-shadow 100ms;
+  -webkit-transition:background 100ms, box-shadow 100ms;
+  }
+
+#file {
+  padding:4px;
+  box-sizing:border-box;
+  vertical-align:middle;
+  }
+
+#submit {
+  cursor:pointer;
+  padding:4px 14px;
+  box-sizing:border-box;
+  vertical-align:middle;
+  }
+
+#submit:hover { background:#aaa; }
+
+#submit:active {
+  background:#666;
+  border-color:#333 #444 #555;
+  box-shadow:inset rgba(0,0,0,0.25) 0px 0px 5px;
+  }
+
+#graph {
+  height:22px;
+  padding:3px 4px;
+  }
+
+#complete {
+  width:0%;
+  margin:0px -1px;
+  height:20px;
+  text-align:center;
+  }
+
+#progressInfo { text-align:center; }
+</style>
+</head>
+<body>
+
+<div class='wrapper'>
+
+<form id='upload' enctype='multipart/form-data' method='post'>
+  <input id='AWSAccessKeyId' type='hidden' name='AWSAccessKeyId' value='' />
+  <input id='acl' type='hidden' name='acl' value='public-read' />
+  <input id='key' type='hidden' name='key' value='${filename}' />
+  <input id='success_action_redirect' type='hidden' name='success_action_redirect' value='' />
+  <input id='policy' type='hidden' name='policy' value='' />
+  <input id='signature' type='hidden' name='signature' value='' />
+  <input id='file' type='file' name='file' />
+  <input id='submit' type='submit' value='Upload file' />
+
+  <small id='uploadInfo'></small>
+</form>
+
+<div id='progress'>
+  <div id='graph'><small id='complete'></small></div>
+  <small id='progressInfo'></small>
+</div>
+
+</div>
+
+<script type='text/javascript'>
+(function() {
+
+// Parse query string and ensure required params exist.
+var qs = {};
+var pairs = location.hash.replace('#', '').split('&');
+for (var i = 0; i < pairs.length; i++) {
+  var key = pairs[i].substr(0, pairs[i].indexOf('='));
+  var val = pairs[i].substr(pairs[i].indexOf('=') + 1);
+  qs[key] = val;
+}
+
+if (!qs.bucket) throw new Error('bucket param is required.');
+if (!qs.AWSAccessKeyId) throw new Error('AWSAccessKeyId param is required.');
+if (!qs.policy) throw new Error('policy param is required.');
+if (!qs.signature) throw new Error('signature param is required.');
+
+var form = document.getElementById('upload');
+var file = document.getElementById('file');
+var submit = document.getElementById('submit');
+var complete = document.getElementById('complete');
+var uploadInfo = document.getElementById('uploadInfo');
+var progressInfo = document.getElementById('progressInfo');
+
+// For older browsers set form values and allow a normal form POST to occur.
+if (!file.files) {
+  form.action = 'http://' + qs.bucket + '.s3.amazonaws.com/';
+  var keys = ['AWSAccessKeyId', 'acl', 'key', 'policy', 'signature', 'success_action_redirect'];
+  for (var i = 0; i < keys.length; i++) {
+    if (qs[keys[i]]) document.getElementById(keys[i]).value = qs[keys[i]];
+  }
+  return;
+}
+
+// Use an XMLHttpRequest in Modern browsers.
+file.onchange = function(e) {
+  uploadInfo.innerHTML = 'Upload size: ' + size(file.files[0].size);
+};
+
+submit.onclick = function(e) {
+  if (!file.files[0]) return;
+
+  document.body.className = 'uploading';
+  e.preventDefault();
+
+  var fd = new FormData();
+  fd.append('AWSAccessKeyId', qs.AWSAccessKeyId);
+  fd.append('acl', qs.acl);
+  fd.append('key', qs.key);
+  // ensures S3 responds with a 204 No Content, not a 303 Location (redirect)
+  fd.append('success_action_redirect', '');
+  fd.append('policy', qs.policy);
+  fd.append('signature', qs.signature);
+  fd.append('file', file.files[0]);
+
+  var xhr = new XMLHttpRequest();
+  xhr.upload.addEventListener('progress', progress, false);
+  xhr.addEventListener('load', load, false);
+  xhr.addEventListener('error', error, false);
+  xhr.addEventListener('abort', abort, false);
+
+  e.preventDefault();
+
+  // xhr.open('POST', 'http://' + qs.bucket + '.s3.amazonaws.com/');
+  xhr.open('POST', 'http://localhost:8888/public/create');
+  xhr.send(fd);
+};
+
+function size(bytes) {
+  if (bytes > 1e9)
+    return (bytes / 1e9).toFixed(2) + 'GB';
+	else if (bytes > 1e6)
+    return (bytes / 1e6).toFixed(2) + 'MB';
+	else
+		return (bytes / 1e3).toFixed(2) + 'KB';
+};
+function progress(e) {
+  if (!e.loaded || !e.total) return;
+  var pct = (e.loaded / e.total * 100).toFixed(1);
+  complete.innerHTML = pct > 10 ? pct + '%' : '';
+  complete.style.width = pct + '%';
+  progressInfo.innerHTML = size(e.loaded) + ' of ' + size(e.total);
+};
+function load(e) {
+  console.warn(e.currentTarget.response);
+  complete.innerHTML = '100%';
+  complete.style.width = '100%';
+  progressInfo.innerHTML = 'Upload complete.';
+};
+function error(e) {
+  progressInfo.innerHTML = 'An error occurred while uploading.';
+};
+function abort(e) {
+  progressInfo.innerHTML = 'An error occurred while uploading.';
+};
+
+})();
+</script>
+</body>
+</html>
