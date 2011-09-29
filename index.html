@@ -111,6 +111,13 @@ form,
   }
 
 #progressInfo { text-align:center; }
+
+/* ### Legacy browsers (IE8, IE7) ### */
+.legacy #complete {
+  width:100%;
+  background-color:#ccc;
+  border-color:#bbb;
+  }
 </style>
 </head>
 <body>
@@ -202,6 +209,8 @@ on(submit, 'click', function(e) {
       if (params[keys[i]])
         document.getElementById(keys[i]).value = params[keys[i]];
     }
+    document.body.className = 'uploading legacy';
+    complete.innerHTML = 'Uploading...';
     return true;
   }
 
