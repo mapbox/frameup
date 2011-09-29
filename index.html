@@ -140,7 +140,6 @@ form,
 <script type='text/javascript'>
 (function() {
 
-var params = {};
 var form = document.getElementById('upload');
 var file = document.getElementById('file');
 var submit = document.getElementById('submit');
@@ -149,13 +148,16 @@ var uploadInfo = document.getElementById('uploadInfo');
 var progressInfo = document.getElementById('progressInfo');
 
 // Parse query string and ensure required params exist.
-var pairs = location.hash.replace('#', '').split('&');
-for (var i = 0; i < pairs.length; i++) {
-  var key = pairs[i].substr(0, pairs[i].indexOf('='));
-  var val = pairs[i].substr(pairs[i].indexOf('=') + 1);
-  params[key] = val;
+if (location.hash) {
+  var params = {};
+  var pairs = location.hash.replace('#', '').split('&');
+  for (var i = 0; i < pairs.length; i++) {
+    var key = pairs[i].substr(0, pairs[i].indexOf('='));
+    var val = pairs[i].substr(pairs[i].indexOf('=') + 1);
+    params[key] = val;
+  }
+  setParams(params);
 }
-setParams(params);
 
 // Allow params to be set via postMessage. Does not check origin under the
 // assumption that the poster must have access to valid credentials in the
@@ -163,6 +165,11 @@ setParams(params);
 window.onmessage = function(ev) {
   if (!ev.data) return;
   setParams(ev.data);
+};
+
+// Use HTML5 to tell the user something about the file they're uploading.
+if (file.files) file.onchange = function(e) {
+  uploadInfo.innerHTML = 'Upload size: ' + size(file.files[0].size);
 };
 
 // Check params and allow form to be posted if required values are available.
@@ -188,9 +195,6 @@ function setParams(params) {
   }
 
   // Use an XMLHttpRequest in modern browsers.
-  file.onchange = function(e) {
-    uploadInfo.innerHTML = 'Upload size: ' + size(file.files[0].size);
-  };
   submit.onclick = function(e) {
     if (!file.files[0]) return;
 
@@ -201,8 +205,7 @@ function setParams(params) {
     fd.append('AWSAccessKeyId', params.AWSAccessKeyId);
     fd.append('acl', params.acl);
     fd.append('key', params.key);
-    // ensures S3 responds with a 204 No Content, not a 303 Location (redirect)
-    fd.append('success_action_redirect', '');
+    fd.append('success_action_redirect', params.success_action_redirect);
     fd.append('policy', params.policy);
     fd.append('signature', params.signature);
     fd.append('file', file.files[0]);
