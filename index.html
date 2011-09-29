@@ -117,7 +117,7 @@ form,
 
 <div class='wrapper'>
 
-<form id='upload' enctype='multipart/form-data' method='post'>
+<form id='upload' enctype='multipart/form-data' method='post' target='_top'>
   <input id='AWSAccessKeyId' type='hidden' name='AWSAccessKeyId' value='' />
   <input id='acl' type='hidden' name='acl' value='public-read' />
   <input id='key' type='hidden' name='key' value='${filename}' />
@@ -140,6 +140,7 @@ form,
 <script type='text/javascript'>
 (function() {
 
+var params = {};
 var form = document.getElementById('upload');
 var file = document.getElementById('file');
 var submit = document.getElementById('submit');
@@ -147,82 +148,88 @@ var complete = document.getElementById('complete');
 var uploadInfo = document.getElementById('uploadInfo');
 var progressInfo = document.getElementById('progressInfo');
 
-// Parse query string and ensure required params exist.
-if (location.hash) {
-  var params = {};
-  var pairs = location.hash.replace('#', '').split('&');
+// IE-safe event listening.
+function on(element, event, method) {
+  if (element.addEventListener)
+    element.addEventListener(event, method);
+  else if (element.attachEvent)
+    element.attachEvent('on' + event, method);
+};
+
+// Assemble form action URL.
+function action() {
+  return 'http://' + params.bucket + '.s3.amazonaws.com/';
+};
+
+// Parse an encoded params string and set params from it.
+function setParams(encoded) {
+  var pairs = encoded.split('&');
   for (var i = 0; i < pairs.length; i++) {
     var key = pairs[i].substr(0, pairs[i].indexOf('='));
     var val = pairs[i].substr(pairs[i].indexOf('=') + 1);
     params[key] = val;
   }
-  setParams(params);
-}
+};
+
+// Parse query string and ensure required params exist.
+if (location.hash) setParams(location.hash.replace('#', ''));
 
 // Allow params to be set via postMessage. Does not check origin under the
 // assumption that the poster must have access to valid credentials in the
 // first place to generate valid params.
-window.onmessage = function(ev) {
-  if (!ev.data) return;
-  setParams(ev.data);
-};
+on(window, 'message', function(ev) {
+  if (ev.data) setParams(ev.data);
+});
 
 // Use HTML5 to tell the user something about the file they're uploading.
-if (file.files) file.onchange = function(e) {
+if (file.files) on(file, 'change', function(e) {
   uploadInfo.innerHTML = 'Upload size: ' + size(file.files[0].size);
-};
+});
 
 // Check params and allow form to be posted if required values are available.
-function setParams(params) {
+on(submit, 'click', function(e) {
   if (!(params.bucket &&
     params.AWSAccessKeyId &&
     params.policy &&
-    params.signature)) {
-    submit.onclick = function(e) { return false; }
-    return;
-  }
+    params.signature &&
+    file.value)) return;
 
   // For older browsers set form values and allow a normal form POST to occur.
   if (!file.files) {
-    form.action = 'http://' + params.bucket + '.s3.amazonaws.com/';
+    form.action = action();
     var keys = ['AWSAccessKeyId', 'acl', 'key', 'policy', 'signature', 'success_action_redirect'];
     for (var i = 0; i < keys.length; i++) {
       if (params[keys[i]])
         document.getElementById(keys[i]).value = params[keys[i]];
     }
-    submit.onclick = function(e) {};
-    return;
+    return true;
   }
 
   // Use an XMLHttpRequest in modern browsers.
-  submit.onclick = function(e) {
-    if (!file.files[0]) return;
+  document.body.className = 'uploading';
+  e.preventDefault();
 
-    document.body.className = 'uploading';
-    e.preventDefault();
+  var fd = new FormData();
+  fd.append('AWSAccessKeyId', params.AWSAccessKeyId);
+  fd.append('acl', params.acl);
+  fd.append('key', params.key);
+  fd.append('success_action_redirect', params.success_action_redirect);
+  fd.append('policy', params.policy);
+  fd.append('signature', params.signature);
+  fd.append('file', file.files[0]);
 
-    var fd = new FormData();
-    fd.append('AWSAccessKeyId', params.AWSAccessKeyId);
-    fd.append('acl', params.acl);
-    fd.append('key', params.key);
-    fd.append('success_action_redirect', params.success_action_redirect);
-    fd.append('policy', params.policy);
-    fd.append('signature', params.signature);
-    fd.append('file', file.files[0]);
+  var xhr = new XMLHttpRequest();
+  xhr.upload.addEventListener('progress', progress, false);
+  xhr.addEventListener('load', load, false);
+  xhr.addEventListener('error', error, false);
+  xhr.addEventListener('abort', abort, false);
 
-    var xhr = new XMLHttpRequest();
-    xhr.upload.addEventListener('progress', progress, false);
-    xhr.addEventListener('load', load, false);
-    xhr.addEventListener('error', error, false);
-    xhr.addEventListener('abort', abort, false);
+  e.preventDefault();
 
-    e.preventDefault();
-
-    xhr.open('POST', 'http://' + params.bucket + '.s3.amazonaws.com/');
-    xhr.setRequestHeader('X_FILE_NAME', file.files[0].name);
-    xhr.send(fd);
-  };
-};
+  xhr.open('POST', action());
+  xhr.setRequestHeader('X_FILE_NAME', file.files[0].name);
+  xhr.send(fd);
+});
 
 function size(bytes) {
   if (bytes > 1e9)
@@ -251,31 +258,33 @@ function load(e) {
 
   // Retrieve response headers and set hash.
   var headers = e.currentTarget && e.currentTarget.getAllResponseHeaders();
-  var msg = {};
   if (headers) {
     headers = headers.split('\n');
     for (var i = 0; i < headers.length; i++) {
       var key = headers[i].substr(0, headers[i].indexOf(':'));
       var val = headers[i].substr(headers[i].indexOf(':') + 1).replace(' ', '');
-      if (key === 'Location' ||
-        key === 'x-amz-request-id' ||
-        key === 'x-amz-id-2') {
-        msg[key] = val;
-      }
+      if (key === 'Location') return parent.postMessage(val);
     }
   }
-  parent.postMessage(msg, '*');
+  parent.postMessage('', '*');
 };
 
 function error(e) {
+  // When success_action_redirect is set XMLHttpRequest fails to parse the
+  // AWS POST response properly throwing a 0 error. The workaround here is
+  // to treat the case as an upload success -- caveats: may actually be a
+  // failure, cannot properly retrieve location of uploaded resource.
+  // @TODO find out why this is the case!
+  if (params.success_action_redirect && e.currentTarget.status === 0)
+    return load(e);
+
   progressInfo.innerHTML = 'An error occurred while uploading.';
-  parent.postMessage({error: 1}, '*');
-  // @TODO retrieve error message from event.
+  parent.postMessage('error', '*');
 };
 
 function abort(e) {
   progressInfo.innerHTML = 'An error occurred while uploading.';
-  parent.postMessage({error: 1}, '*');
+  parent.postMessage('error', '*');
 };
 
 })();
