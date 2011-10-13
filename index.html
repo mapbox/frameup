@@ -212,7 +212,10 @@ on(submit, 'click', function(e) {
     params.policy &&
     params.signature &&
     file.value &&
-    validates)) return;
+    validates)) {
+    e.preventDefault();
+    return false;
+  }
 
   // For older browsers set form values and allow a normal form POST to occur.
   if (!file.files) {
