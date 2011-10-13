@@ -147,6 +147,7 @@ form,
 <script type='text/javascript'>
 (function() {
 
+var validates = true;
 var params = {};
 var form = document.getElementById('upload');
 var file = document.getElementById('file');
@@ -189,8 +190,19 @@ on(window, 'message', function(ev) {
 });
 
 // Use HTML5 to tell the user something about the file they're uploading.
-if (file.files) on(file, 'change', function(e) {
-  uploadInfo.innerHTML = 'Upload size: ' + size(file.files[0].size);
+on(file, 'change', function(e) {
+  if (params.filename && file.value) {
+    if (file.value.match(new RegExp(params.filename))) {
+      uploadInfo.innerHTML = '';
+      validates = true;
+    } else {
+      uploadInfo.innerHTML = 'Invalid filetype.';
+      validates = false;
+      return;
+    }
+  }
+  if (file.files)
+    uploadInfo.innerHTML = 'Upload size: ' + size(file.files[0].size);
 });
 
 // Check params and allow form to be posted if required values are available.
@@ -199,7 +211,8 @@ on(submit, 'click', function(e) {
     params.AWSAccessKeyId &&
     params.policy &&
     params.signature &&
-    file.value)) return;
+    file.value &&
+    validates)) return;
 
   // For older browsers set form values and allow a normal form POST to occur.
   if (!file.files) {
