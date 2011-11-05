@@ -288,7 +288,7 @@ function load(e) {
     for (var i = 0; i < headers.length; i++) {
       var key = headers[i].substr(0, headers[i].indexOf(':'));
       var val = headers[i].substr(headers[i].indexOf(':') + 1).replace(' ', '');
-      if (key === 'Location') return parent.postMessage(val);
+      if (key === 'Location') return parent.postMessage(val, '*');
     }
   }
   parent.postMessage('', '*');
