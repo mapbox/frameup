@@ -166,7 +166,7 @@ function on(element, event, method) {
 
 // Assemble form action URL.
 function action() {
-  return 'http://' + params.bucket + '.s3.amazonaws.com/';
+  return location.protocol + '//' + params.bucket + '.s3.amazonaws.com/';
 };
 
 // Parse an encoded params string and set params from it.
