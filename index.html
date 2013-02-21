@@ -179,14 +179,14 @@ function setParams(encoded) {
   }
 };
 
-// Add hidden form element
+// Add hidden form element to beginning of form
 function addHidden(theForm, key, value) {
     var input = document.createElement('input');
     input.type = 'hidden';
     input.id = key;
     input.name = key;
     input.value = value;
-    theForm.appendChild(input);
+    theForm.insertBefore(input, theForm.firstChild);
 };
 
 // Parse query string and ensure required params exist.
@@ -228,7 +228,7 @@ on(submit, 'click', function(e) {
   }
 
   if (params['x-amz-security-token'])
-    addHidden(form, 'x-amz-security-token', params['x-amz-security-token']);
+    addHidden(form, 'x-amz-security-token', '');
 
   // For older browsers set form values and allow a normal form POST to occur.
   if (!file.files) {
