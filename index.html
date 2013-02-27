@@ -179,6 +179,16 @@ function setParams(encoded) {
   }
 };
 
+// Add hidden form element to beginning of form
+function addHidden(theForm, key, value) {
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.id = key;
+    input.name = key;
+    input.value = value;
+    theForm.insertBefore(input, theForm.firstChild);
+};
+
 // Parse query string and ensure required params exist.
 if (location.hash) setParams(location.hash.replace('#', ''));
 
@@ -217,10 +227,13 @@ on(submit, 'click', function(e) {
     return false;
   }
 
+  if (params['x-amz-security-token'])
+    addHidden(form, 'x-amz-security-token', '');
+
   // For older browsers set form values and allow a normal form POST to occur.
   if (!file.files) {
     form.action = action();
-    var keys = ['AWSAccessKeyId', 'acl', 'key', 'policy', 'signature', 'success_action_redirect'];
+    var keys = ['AWSAccessKeyId', 'x-amz-security-token', 'acl', 'key', 'policy', 'signature', 'success_action_redirect'];
     for (var i = 0; i < keys.length; i++) {
       if (params[keys[i]])
         document.getElementById(keys[i]).value = params[keys[i]];
@@ -236,6 +249,8 @@ on(submit, 'click', function(e) {
 
   var fd = new FormData();
   fd.append('AWSAccessKeyId', params.AWSAccessKeyId);
+  if (params['x-amz-security-token'])
+    fd.append('x-amz-security-token', params['x-amz-security-token']);
   fd.append('acl', params.acl);
   fd.append('key', params.key);
   fd.append('success_action_redirect', params.success_action_redirect);
