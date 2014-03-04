@@ -128,7 +128,6 @@ form,
   <input id='AWSAccessKeyId' type='hidden' name='AWSAccessKeyId' value='' />
   <input id='acl' type='hidden' name='acl' value='public-read' />
   <input id='key' type='hidden' name='key' value='${filename}' />
-  <input id='success_action_redirect' type='hidden' name='success_action_redirect' value='' />
   <input id='policy' type='hidden' name='policy' value='' />
   <input id='signature' type='hidden' name='signature' value='' />
   <input id='file' type='file' name='file' />
@@ -227,6 +226,8 @@ on(submit, 'click', function(e) {
     return false;
   }
 
+  if (params['success_action_redirect'])
+    addHidden(form, 'success_action_redirect', '');
   if (params['x-amz-security-token'])
     addHidden(form, 'x-amz-security-token', '');
 
@@ -253,7 +254,8 @@ on(submit, 'click', function(e) {
     fd.append('x-amz-security-token', params['x-amz-security-token']);
   fd.append('acl', params.acl);
   fd.append('key', params.key);
-  fd.append('success_action_redirect', params.success_action_redirect);
+  if (params.success_action_redirect)
+    fd.append('success_action_redirect', params.success_action_redirect);
   fd.append('policy', params.policy);
   fd.append('signature', params.signature);
   fd.append('file', file.files[0]);
