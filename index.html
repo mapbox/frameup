@@ -4,18 +4,33 @@
 <meta charset='UTF-8'/>
 <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
 <style type='text/css'>
-body { background: transparent;}
+body {
+  height: 80px;
+  overflow: hidden;
+  background: transparent;
+}
 
-.uploading #progress { display:block; }
-.error #errorInfo { display: block;}
+form,
+#progress { height: 80px;}
 
-label:empty { height: 0;}
-label { margin-top: 10px; height: 20px;}
+.uploading #progress {
+  -webkit-transform:translateY(0%);
+     -moz-transform:translateY(0%);
+      -ms-transform:translateY(0%);
+          transform:translateY(0%);
+}
+
+.uploading form {
+  -webkit-transform:translateY(-100%);
+     -moz-transform:translateY(-100%);
+      -ms-transform:translateY(-100%);
+          transform:translateY(-100%);
+}
 
 #complete {
   width:0%;
-  box-shadow:inset 0 0 0 3px rgba(0,0,0,.25);
-  }
+  height: 30px;
+}
 
 #file {
   width: 66.6666%;
@@ -30,7 +45,7 @@ label { margin-top: 10px; height: 20px;}
 </style>
 </head>
 <body>
-<form id='upload' enctype='multipart/form-data' method='post' target='_top'>
+<form id='upload' class='pin-top animate' enctype='multipart/form-data' method='post' target='_top'>
   <input id='AWSAccessKeyId' type='hidden' name='AWSAccessKeyId' value='' />
   <input id='acl' type='hidden' name='acl' value='public-read' />
   <input id='key' type='hidden' name='key' value='${filename}' />
@@ -39,13 +54,12 @@ label { margin-top: 10px; height: 20px;}
   <input id='file' class='row1 quiet inline round-left fill-darken0 pad1 small' type='file' name='file' /><!--
   --><input id='submit' class='inline round-right' type='submit' value='Upload file' />
 
-  <label class='small round strong block quiet center' id='uploadInfo'></label>
+  <label class='pad1 small round strong block quiet center' id='uploadInfo'></label>
 </form>
-<div class='hidden' id='progress'>
-  <div class='fill-white col12 round row1 pin-top' id='graph'><small class='center strong dark round fill-darken1' id='complete'></small></div>
-  <label class='small pin-bottom round strong block quiet fill-gray center' id='progressInfo'></label>
+<div class='pin-top offcanvas-bottom animate' id='progress'>
+  <div class='fill-darken0 pad0 col12 round row1' id='graph'><small class='quiet center strong round fill-darken1 pad0' id='complete'></small></div>
+  <label class='pad1 small strong block quiet center' id='progressInfo'></label>
 </div>
-<div class='icon alert hidden pad1 small pin-top round strong fill-orange dark center' id='errorInfo'></div>
 <script type='text/javascript'>
 (function() {
 
@@ -57,7 +71,6 @@ var submit = document.getElementById('submit');
 var complete = document.getElementById('complete');
 var uploadInfo = document.getElementById('uploadInfo');
 var progressInfo = document.getElementById('progressInfo');
-var errorInfo = document.getElementById('errorInfo');
 
 // IE-safe event listening.
 function on(element, event, method) {
@@ -210,15 +223,13 @@ function error(e) {
   if (params.success_action_redirect && e.currentTarget.status === 0)
     return load(e);
 
-  errorInfo.innerHTML = 'An error occurred while uploading.';
+  progressInfo.innerHTML = 'An error occurred while uploading.';
   parent.postMessage('error', '*');
-  document.body.className = 'error';
 };
 
 function abort(e) {
-  errorInfo.innerHTML = 'An error occurred while uploading.';
+  progressInfo.innerHTML = 'An error occurred while uploading.';
   parent.postMessage('error', '*');
-  document.body.className = 'error';
 };
 
 })();
