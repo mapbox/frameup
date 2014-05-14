@@ -225,12 +225,12 @@ function error(e) {
   if (params.success_action_redirect && e.currentTarget.status === 0)
     return load(e);
 
-  progressInfo.innerHTML = 'An error occurred while uploading.';
+  progressInfo.innerHTML = '<span class="icon error"></span> An error occurred while uploading.';
   parent.postMessage('error', '*');
 };
 
 function abort(e) {
-  progressInfo.innerHTML = 'An error occurred while uploading.';
+  progressInfo.innerHTML = '<span class="icon error"></span> An error occurred while uploading.';
   parent.postMessage('error', '*');
 };
 
