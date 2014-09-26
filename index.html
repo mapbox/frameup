@@ -120,7 +120,7 @@ on(window, 'message', function(ev) {
 // Use HTML5 to tell the user something about the file they're uploading.
 on(file, 'change', function(e) {
   if (params.filename && file.value) {
-    if (file.value.match(new RegExp(params.filename))) {
+    if (file.value.match(new RegExp(params.filename, "i"))) {
       uploadInfo.innerHTML = '';
       validates = true;
     } else {
